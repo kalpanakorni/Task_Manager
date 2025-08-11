@@ -1,0 +1,6 @@
+Flask==3.0.3
+Flask-Cors==4.0.0
+APScheduler==3.10.4
+python-dotenv==1.0.1
+smtplib3==3.0.4
+email-validator==2.1.1

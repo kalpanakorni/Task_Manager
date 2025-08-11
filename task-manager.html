@@ -372,8 +372,20 @@
     </style>
 </head>
 <body>
+    <!-- Sign-In Modal -->
+    <div id="signinModal" class="modal" style="display:none;position:fixed;z-index:9999;left:0;top:0;width:100vw;height:100vh;background:rgba(0,0,0,0.4);justify-content:center;align-items:center;">
+      <div style="background:#fff;padding:32px 24px;border-radius:16px;box-shadow:0 8px 32px rgba(102,126,234,0.14);max-width:350px;width:90%;text-align:center;">
+        <h2 style="margin-bottom:16px;color:#764ba2;">Sign In</h2>
+        <input id="signinEmail" type="email" placeholder="Enter your email" style="width:90%;padding:12px 10px;margin-bottom:18px;border-radius:8px;border:1.5px solid #667eea;font-size:1em;outline:none;">
+        <div id="signinMessage" style="color:#e53e3e;margin-bottom:12px;font-size:0.95em;"></div>
+        <button onclick="submitSignIn()" class="btn-primary" style="width:100%;padding:12px;font-size:1.1em;border-radius:8px;">Sign In</button>
+      </div>
+    </div>
+
     <div class="container">
         <h1>Task Manager Pro</h1>
+    <button onclick="showSignInModal()" class="btn-primary" style="float:right;margin-top:-40px;margin-bottom:16px;">Sign In</button>
+    <button id="stopRemindersBtn" onclick="stopReminders()" class="btn-danger" style="float:right;margin-top:-40px;margin-right:120px;margin-bottom:16px;display:none;">Stop Reminders</button>
         
         <div class="stats">
             <div class="stat-card">
@@ -394,6 +406,7 @@
             <div class="input-group">
                 <input type="text" id="taskInput" placeholder="Enter task description..." />
                 <input type="number" id="priorityInput" placeholder="Priority (1-5)" min="1" max="5" value="3" />
+                <input type="time" id="timeInput" placeholder="Time to complete (optional)" />
                 <button class="btn-primary" onclick="addTask()">Add Task</button>
             </div>
             <div class="input-group">
@@ -456,23 +469,9 @@
 
         // Load tasks from memory on page load
         function loadTasks() {
-            // Initialize with some sample data if empty
-            if (tasks.length === 0) {
-                tasks = [
-                    { id: 1, task: 'eat lunch', priority: 2, createdAt: new Date().toISOString() },
-                    { id: 2, task: 'clean house', priority: 4, createdAt: new Date().toISOString() },
-                    { id: 3, task: 'eating', priority: 4, createdAt: new Date().toISOString() }
-                ];
-            }
-            
-            // Load completed tasks
-            completedTasks = [
-                { id: 101, task: 'Buy groceries', completedAt: new Date().toISOString() },
-                { id: 102, task: 'reading', completedAt: new Date().toISOString() },
-                { id: 103, task: 'swimming', completedAt: new Date().toISOString() },
-                { id: 104, task: 'supriya', completedAt: new Date().toISOString() }
-            ];
-            
+            // Start with zero pending and zero completed tasks
+            tasks = [];
+            completedTasks = [];
             updateDisplay();
         }
 
@@ -488,38 +487,43 @@
         }
 
         function addTask() {
-            const taskInput = document.getElementById('taskInput');
-            const priorityInput = document.getElementById('priorityInput');
+    const taskInput = document.getElementById('taskInput');
+    const priorityInput = document.getElementById('priorityInput');
+    const timeInput = document.getElementById('timeInput'); // NEW
+
+    const taskText = taskInput.value.trim();
+    const priority = parseInt(priorityInput.value);
+    const scheduledTime = timeInput.value; // NEW
+
+    if (!taskText) {
+        showNotification('Please enter a task description!', 'error');
+        return;
+    }
+
+    if (priority < 1 || priority > 5) {
+        showNotification('Priority must be between 1 and 5!', 'error');
+        return;
+    }
+
+    const newTask = {
+        id: Date.now(),
+        task: taskText,
+        priority: priority,
+        createdAt: new Date().toISOString(),
+        scheduledTime: scheduledTime || null // NEW
+    };
+
+    tasks.push(newTask);
+    tasks.sort((a, b) => a.priority - b.priority);
+
+    taskInput.value = '';
+    priorityInput.value = '3';
+    timeInput.value = ''; // NEW
+
+    updateDisplay();
+    showNotification(`Added task: "${taskText}" with priority ${priority}`);
+}
             
-            const taskText = taskInput.value.trim();
-            const priority = parseInt(priorityInput.value);
-            
-            if (!taskText) {
-                showNotification('Please enter a task description!', 'error');
-                return;
-            }
-            
-            if (priority < 1 || priority > 5) {
-                showNotification('Priority must be between 1 and 5!', 'error');
-                return;
-            }
-            
-            const newTask = {
-                id: Date.now(),
-                task: taskText,
-                priority: priority,
-                createdAt: new Date().toISOString()
-            };
-            
-            tasks.push(newTask);
-            tasks.sort((a, b) => a.priority - b.priority);
-            
-            taskInput.value = '';
-            priorityInput.value = '3';
-            
-            updateDisplay();
-            showNotification(`Added task: "${taskText}" with priority ${priority}`);
-        }
 
         function deleteTask(id) {
             const taskIndex = tasks.findIndex(task => task.id === id);
@@ -622,6 +626,7 @@
                         <div class="task-meta">
                             <span class="priority-badge priority-${task.priority}">Priority ${task.priority}</span>
                             <span>Created: ${new Date(task.createdAt).toLocaleDateString()}</span>
+                            <span>${task.scheduledTime ? `Scheduled Time: ${task.scheduledTime}` : ''}</span>
                         </div>
                     </div>
                     <div class="task-actions">
@@ -656,6 +661,7 @@
                         <div class="task-meta">
                             <span class="priority-badge priority-${task.priority || 3}">Priority ${task.priority || 3}</span>
                             <span>Completed: ${new Date(task.completedAt).toLocaleDateString()}</span>
+                            <span>${task.scheduledTime ? `Scheduled Time: ${task.scheduledTime}` : ''}</span>
                         </div>
                     </div>
                     <div class="task-actions">
@@ -772,6 +778,62 @@
 
         // Initialize the app
         loadTasks();
-    </script>
+    // --- Sign-In Modal JS ---
+function showSignInModal() {
+  document.getElementById('signinModal').style.display = 'flex';
+}
+function hideSignInModal() {
+  document.getElementById('signinModal').style.display = 'none';
+}
+function submitSignIn() {
+  const email = document.getElementById('signinEmail').value;
+  fetch('http://127.0.0.1:5000/signin', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({email})
+  })
+  .then(r => r.json())
+  .then(data => {
+    if(data.success) {
+      document.getElementById('signinMessage').style.color = '#38a169';
+      document.getElementById('signinMessage').innerText = 'Signed in! Reminders enabled.';
+      setTimeout(hideSignInModal, 1200);
+      localStorage.setItem('signedEmail', email);
+      document.getElementById('stopRemindersBtn').style.display = '';
+    } else {
+      document.getElementById('signinMessage').innerText = data.message;
+    }
+  }).catch(() => {
+    document.getElementById('signinMessage').innerText = 'Network error.';
+  });
+}
+function stopReminders() {
+  const email = localStorage.getItem('signedEmail');
+  if(!email) return;
+  fetch('http://127.0.0.1:5000/stop-reminders', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({email})
+  })
+  .then(r => r.json())
+  .then(data => {
+    if(data.success) {
+      alert('Reminders stopped.');
+      document.getElementById('stopRemindersBtn').style.display = 'none';
+    } else {
+      alert(data.message);
+    }
+  });
+}
+// Show stop button if already signed in
+window.addEventListener('DOMContentLoaded',function(){
+  if(localStorage.getItem('signedEmail')){
+    document.getElementById('stopRemindersBtn').style.display = '';
+  }
+});
+</script>
+    <footer style="text-align:center; margin-top:40px; padding:20px 0; color:#764ba2; font-weight:bold; font-size:1.1em; background:rgba(102,126,234,0.07); border-radius:12px;">
+        &copy; 2025 kalpana korni
+    </footer>
 </body>
 </html>

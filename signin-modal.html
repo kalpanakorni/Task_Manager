@@ -1,0 +1,57 @@
+<!-- Sign-In Modal HTML to be embedded in task-manager.html -->
+<div id="signinModal" class="modal" style="display:none;position:fixed;z-index:9999;left:0;top:0;width:100vw;height:100vh;background:rgba(0,0,0,0.4);justify-content:center;align-items:center;">
+  <div style="background:#fff;padding:32px 24px;border-radius:16px;box-shadow:0 8px 32px rgba(102,126,234,0.14);max-width:350px;width:90%;text-align:center;">
+    <h2 style="margin-bottom:16px;color:#764ba2;">Sign In</h2>
+    <input id="signinEmail" type="email" placeholder="Enter your email" style="width:90%;padding:12px 10px;margin-bottom:18px;border-radius:8px;border:1.5px solid #667eea;font-size:1em;outline:none;">
+    <div id="signinMessage" style="color:#e53e3e;margin-bottom:12px;font-size:0.95em;"></div>
+    <button onclick="submitSignIn()" class="btn-primary" style="width:100%;padding:12px;font-size:1.1em;border-radius:8px;">Sign In</button>
+  </div>
+</div>
+<script>
+function showSignInModal() {
+  document.getElementById('signinModal').style.display = 'flex';
+}
+function hideSignInModal() {
+  document.getElementById('signinModal').style.display = 'none';
+}
+function submitSignIn() {
+  const email = document.getElementById('signinEmail').value;
+  fetch('http://127.0.0.1:5000/signin', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({email})
+  })
+  .then(r => r.json())
+  .then(data => {
+    if(data.success) {
+      document.getElementById('signinMessage').style.color = '#38a169';
+      document.getElementById('signinMessage').innerText = 'Signed in! Reminders enabled.';
+      setTimeout(hideSignInModal, 1200);
+      localStorage.setItem('signedEmail', email);
+      document.getElementById('stopRemindersBtn').style.display = '';
+    } else {
+      document.getElementById('signinMessage').innerText = data.message;
+    }
+  }).catch(() => {
+    document.getElementById('signinMessage').innerText = 'Network error.';
+  });
+}
+function stopReminders() {
+  const email = localStorage.getItem('signedEmail');
+  if(!email) return;
+  fetch('http://127.0.0.1:5000/stop-reminders', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({email})
+  })
+  .then(r => r.json())
+  .then(data => {
+    if(data.success) {
+      alert('Reminders stopped.');
+      document.getElementById('stopRemindersBtn').style.display = 'none';
+    } else {
+      alert(data.message);
+    }
+  });
+}
+</script>
